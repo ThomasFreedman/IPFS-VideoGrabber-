@@ -1,10 +1,8 @@
-These scripts will likely need updating as IPFS is developed and new versions made available. After a few months from when the install-ipfs script was published, it stopped working due to the Go and Siderus repos for the core IPFS code changing. The installer script provides for different versions, but required changes anyway.
+These python3 scripts use the youtube-dl module and sqlite along with IPFS to download videos and store them in IPFS. The metadata for each video is stored in the sqlite database, and can be used to search for any video based on over 60 criteria. It will provide 2 IPFS hashes for each video: 1) the video and 2) the metadata file in JSON format.
 
-I also have a python3 script that uses the youtube-dl module and sqlite along with IPFS to download videos and store them in IPFS. The metadata for each video is stored in the sqlite database, and can be used to search for any video based on over 60 criteria. It will provide 2 IPFS hashes for each video: 1) the video and 2) the meta file in JSON format.
+Youtube-dl is both a python module as well as a command line program that uses it. It os cross-platform, and capable of automating the download of videos from several sources including youtube, vimeo and even bitchute. Probably others as well.
 
-Youtube-dl is both a python module as well as a command line program that uses it. It is capable of automating the download of videos from several sources including youtube, vimeo and even bitchute. Probably others as well.
-
-My download scripts are rather crude, and require the user to edit the python code to specify the list of URLs and qualifying criteria for videos to download and the IPFS repository to store them in. The basic script can be found in the VideoGrabber repo where this file is found.
+These scripts are rather crude, and require the user to edit the python code to specify the list of URLs and qualifying criteria for videos to download and the IPFS repository to store them in. The basic script can be found in the VideoGrabber repo where this file is found.
 
 My most recent plans were to create a "Pirate Box" for Ernest Hancock as a repository for his family to share their photos etc privately (so they could stop putting all their info into facebook). I have determined the basic infrastructure for such a private IPFS network was possible, and files added on any node would be available from all other nodes that shared the same swarm key (a hash that all nodes in the private network must use). I was going to use Zenity to create a basic GUI to perform queries and insert individual files into IPFS. On Sept 19th I outlined the approach I was planning in a Telegram DM to Ernie:
 
