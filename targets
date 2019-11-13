@@ -1,0 +1,7 @@
+Targets = {
+    'londonReal': ['https://www.youtube.com/user/LondonRealTV/videos'],
+    'tragdyHope': ['https://www.youtube.com/user/TragedyandHopeMag/videos'],
+    'anarchast':  ['https://www.youtube.com/user/TheAnarchast/videos'],
+    'beyondVeil': ['https://www.youtube.com/user/truthfrequency/videos'],
+    'jordPeters': ['https://www.youtube.com/user/JordanPetersonVideos/videos']
+}

@@ -1,0 +1,6 @@
+sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
+sudo chmod a+rx /usr/local/bin/youtube-dl
+
+youtube-dl -i -v --flat-playlist --skip-download ""
+
+youtube-dl -j --flat-playlist "https://<yourYoutubePlaylist>" | jq

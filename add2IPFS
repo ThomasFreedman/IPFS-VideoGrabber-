@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# This bash script adds 2 files to IPFS and stores their hashes
+# in the same folder as the files. It also appends those hashes
+# to a master index of hashes which is also saved in IPFS by
+# the python3 program that calls this script.
+#
+# args: $1 == path to root of group containing folders with videos
+#       $2 == base file name for all downloaded files
+#       $3 == the video file
+#echo ">" $0 $1 $2 $3
+
+cd $1
+ipfs add "$2.info.json" > metaHash.txt 2> /dev/null
+ipfs add "$3" > videoHash.txt 2> /dev/null
+
+cat metaHash.txt >> ../groupHashes.txt 2> /dev/null
+cat videoHash.txt >> ../groupHashes.txt 2> /dev/null
+
+# Doesn't appear to work, only partial file returned!
+#rm -rf "$3"  # Remove the video file after adding to IPFS
