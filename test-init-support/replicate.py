@@ -54,23 +54,23 @@ def copyPinFiles(row):
 
     printMarker(True)
     copyCmd = "ipfs files cp /ipfs/" + vhash + " /" + grupe + "/" + video
-    os.system("echo " + copyCmd)
-#    os.system(copyCmd)
+#    os.system("echo " + copyCmd)
+    os.system(copyCmd)
 
     printMarker()
     pinCmd = "ipfs pin add --progress --recursive=true /ipfs/" + vhash
-    os.system("echo " + pinCmd + "\n")
-#    os.system(pinCmd + "\n")
+#    os.system("echo " + pinCmd + "\n")
+    os.system(pinCmd + "\n")
 
     printMarker(True)
     copyCmd = "ipfs files cp /ipfs/" + mhash + " /" + grupe + "/" + meta
-    os.system("echo " + copyCmd)
-#    os.system(copyCmd)
+#    os.system("echo " + copyCmd)
+    os.system(copyCmd)
 
     printMarker()
     pinCmd = "ipfs pin add --progress --recursive=true /ipfs/" + mhash
-    os.system("echo " + pinCmd + "\n")
-#    os.system(pinCmd + "\n")
+#    os.system("echo " + pinCmd + "\n")
+    os.system(pinCmd + "\n")
 
 
 
@@ -104,8 +104,8 @@ try:
     for row in cursor.execute(sql):
         if row[0] != grupe:
             grupe = row[0]
-            os.system("echo 'ipfs files mkdir /" + grupe + "'")
-#            os.system("ipfs files mkdir /" + grupe)
+#            os.system("echo 'ipfs files mkdir /" + grupe + "'")
+            os.system("ipfs files mkdir /" + grupe)
 
         # Process this row into IPFS
         copyPinFiles(row)
