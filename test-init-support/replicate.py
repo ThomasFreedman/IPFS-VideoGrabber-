@@ -1,14 +1,15 @@
 #!/usr/bin/python3
-
 #
 # Program to replicate an IPFS server populated with
-# ytdl-ipfs????.py
+# the Video Grabber progran (ytdl-ipfs????.py) which
+# creates a SQLite database with hashes for each  of
+# the files added to IPFS.
 #
 # This requires the SQLite3 database from the servers
-# being replicated. It simply does an "ipfs cat <has>"
-# for every hash in the database, then does an "ipfs
-# add file" obtained. This results in a different hash
-# for the same content!!!
+# being replicated. It uses "ipfs cp <hash> /<grupe>"
+# for every hash in the database to transfer the file,
+# then an "ipfs pin add <hash>" to insure it will not
+# be garbage collected on the local IPFS server
 #
 from __future__ import unicode_literals
 from datetime import *
@@ -16,19 +17,20 @@ import sqlite3
 import sys
 import os
 
-HOME   = os.path.dirname(os.path.realpath(__file__)) + '/'
+HOME = os.path.dirname(os.path.realpath(__file__)) + '/'
 
 # GLOBALS
-OpCounter     = 0    # Count of IPFS operations done
+OpCounter = 0      # Count of IPFS operations done
 
 
 def usage():
-    print("\nReplicate files on a remote IPFS server on local IPFS server.")
-    print("Requires Sqlite3 database file that specifies the files.\n")
-    print("Usage: %s <-db file> | <--database file>\n" % sys.argv[0])
-    print("The ipfs command must be in the $PATH")
-    print("To view progress and create a log file use:")
-    print("%s <args> | tee <log file name>" % sys.argv[0])
+    str = "\nReplicate files on a remote IPFS server on local IPFS server."
+    str += "Requires Sqlite3 database file that specifies the files.\n"
+    str += "Usage: %s <-db file> | <--database file> [-p | --progress]\n" % sys.argv[0]
+    str += "The ipfs command must be in the $PATH. To create a log file of "
+    str += "the replication process (DON'T use the --progress flag) use:"
+    str += "%s <args> | tee <log file name>" % sys.argv[0]
+    print(str)
     exit(0)
 
 
@@ -43,14 +45,18 @@ def printMarker(newLine=False):
     OpCounter = OpCounter + 1
 
 
-# Copy video & meta files from remote node into local virtual folder & pin them
-# Print progress as IPFS operations counter with day and time
-def copyPinFiles(row):
+# Copy video & meta files from remote node into local virtual folder & pin them.
+# Print progress as IPFS operations counter with day and time. The prog variable
+# determines whether the  pinning operation reports incremental progress,  which 
+# makes for very long log files if tee is used on the output to create the log.
+def copyPinFiles(row, prog):
     grupe = row[0]
     vhash = row[1]
     mhash = row[2]
     video = os.path.basename(str(row[3]))
     meta  = video.split(".")[0] + ".info.json"
+    if prog: progress = "--progress"
+    else: progress = ''
 
     printMarker(True)
     copyCmd = "ipfs files cp /ipfs/" + vhash + " /" + grupe + "/" + video
@@ -58,7 +64,7 @@ def copyPinFiles(row):
     os.system(copyCmd)
 
     printMarker()
-    pinCmd = "ipfs pin add --progress --recursive=true /ipfs/" + vhash
+    pinCmd = "ipfs pin add --recursive=true %s /ipfs/%s" % (progress, vhash)
 #    os.system("echo " + pinCmd + "\n")
     os.system(pinCmd + "\n")
 
@@ -68,7 +74,7 @@ def copyPinFiles(row):
     os.system(copyCmd)
 
     printMarker()
-    pinCmd = "ipfs pin add --progress --recursive=true /ipfs/" + mhash
+    pinCmd = "ipfs pin add --recursive=true %s /ipfs/%s" % (progress, mhash)
 #    os.system("echo " + pinCmd + "\n")
     os.system(pinCmd + "\n")
 
@@ -81,16 +87,18 @@ def copyPinFiles(row):
 #                                                                           #
 #############################################################################
 argc = len(sys.argv)
-conn = errors = grupe = sql = False
+conn = errors = grupe = sql = progress = False
 
 try:
     # Parse command line
     if argc > 1:
+        if sys.argv[1] == "-h" or sys.argv[1] == "--help":
+            usage()
         if argc > 2 and (sys.argv[1] == "-db" or sys.argv[1] == "--database"):
             dbFile = sys.argv[2]
             conn = sqlite3.connect(dbFile)
-        if sys.argv[1] == "-h" or sys.argv[1] == "--help":
-            usage()
+        if argc > 3 and (sys.argv[3] == "-p" or sys.argv[3] == "--progress"): 
+            progress = True
     else: usage()
 
     conn.row_factory = sqlite3.Row   # Set query results to dictionary format
@@ -108,7 +116,7 @@ try:
             os.system("ipfs files mkdir /" + grupe)
 
         # Process this row into IPFS
-        copyPinFiles(row)
+        copyPinFiles(row, progress)
 
 
 except sqlite3.Error as e:
