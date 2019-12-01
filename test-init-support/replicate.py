@@ -42,7 +42,7 @@ def printMarker(newLine=False):
     if newLine: str += "\n"
     mark = str % (OpCounter, now.strftime("%a %H:%M:%S"))
     print(mark, flush=True)
-    OpCounter = OpCounter + 1
+    OpCounter += 1
 
 
 # Copy video & meta files from remote node into local virtual folder & pin them.
@@ -94,9 +94,14 @@ try:
     if argc > 1:
         if sys.argv[1] == "-h" or sys.argv[1] == "--help":
             usage()
+
+        # Required parameter is SQLite database file
         if argc > 2 and (sys.argv[1] == "-db" or sys.argv[1] == "--database"):
             dbFile = sys.argv[2]
             conn = sqlite3.connect(dbFile)
+        else: usage()
+
+        # Only use --progress on IPFS pinning if this option is used
         if argc > 3 and (sys.argv[3] == "-p" or sys.argv[3] == "--progress"): 
             progress = True
     else: usage()
