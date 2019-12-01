@@ -24,11 +24,11 @@ OpCounter = 0      # Count of IPFS operations done
 
 
 def usage():
-    str = "\nReplicate files on a remote IPFS server on local IPFS server."
-    str += "Requires Sqlite3 database file that specifies the files.\n"
-    str += "Usage: %s <-db file> | <--database file> [-p | --progress]\n" % sys.argv[0]
+    str = "\nReplicate files on a remote IPFS server on local IPFS server.\n"
+    str += "Requires Sqlite3 database file that specifies the files.\n\n"
+    str += "Usage: %s <-db file> | <--database file> [-p | --progress]\n\n" % sys.argv[0]
     str += "The ipfs command must be in the $PATH. To create a log file of "
-    str += "the replication process (DON'T use the --progress flag) use:"
+    str += "the replication process (DON'T use the --progress flag) use:\n"
     str += "%s <args> | tee <log file name>" % sys.argv[0]
     print(str)
     exit(0)
