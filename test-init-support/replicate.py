@@ -6,7 +6,7 @@
 # the files added to IPFS.
 #
 # This requires the SQLite3 database from the servers
-# being replicated. It uses "ipfs cp <hash> /<grupe>"
+# being replicated. It uses "ipfs cp <hash> /<grupe>/file"
 # for every hash in the database to transfer the file,
 # then an "ipfs pin add <hash>" to insure it will not
 # be garbage collected on the local IPFS server
