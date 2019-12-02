@@ -20,16 +20,17 @@ import os
 HOME = os.path.dirname(os.path.realpath(__file__)) + '/'
 
 # GLOBALS
-OpCounter = 0      # Count of IPFS operations done
-
+global OpCounter     # Count of IPFS operations done
 
 def usage():
+    cmd = sys.argv[0]
     str = "\nReplicate files on a remote IPFS server on local IPFS server.\n"
     str += "Requires Sqlite3 database file that specifies the files.\n\n"
-    str += "Usage: %s <-db file> | <--database file> [-p | --progress]\n\n" % sys.argv[0]
-    str += "The ipfs command must be in the $PATH. To create a log file of "
-    str += "the replication process (DON'T use the --progress flag) use:\n"
-    str += "%s <args> | tee <log file name>" % sys.argv[0]
+    str += "Usage: " + cmd + " [-h] | <-d file> [-s <int>] [-p]\n"
+    str += "where -d=SQLite DB file, -s=skip DB rows, -p=show pin progress\n\n"
+    str += "ipfs must be in $PATH, and argument order is important.\n"
+    str += "To create a log file DON'T use the -p flag, use:\n\n"
+    str += cmd  + " <args> | tee -a <log file name>\n"
     print(str)
     exit(0)
 
@@ -37,45 +38,46 @@ def usage():
 # Prints IPFS operations done and day / time marker on console
 def printMarker(newLine=False):
     global OpCounter
+
     now = datetime.now()
-    str = "Ops: %5d %s"
+    str = "%s IPFS Operations Completed: %d"
     if newLine: str += "\n"
-    mark = str % (OpCounter, now.strftime("%a %H:%M:%S"))
+    mark = str % (now.strftime("%a %H:%M:%S"), OpCounter)
     print(mark, flush=True)
     OpCounter += 1
 
 
 # Copy video & meta files from remote node into local virtual folder & pin them.
 # Print progress as IPFS operations counter with day and time. The prog variable
-# determines whether the  pinning operation reports incremental progress,  which 
+# determines whether the  pinning operation reports incremental progress,  which
 # makes for very long log files if tee is used on the output to create the log.
 def copyPinFiles(row, prog):
     grupe = row[0]
     vhash = row[1]
     mhash = row[2]
-    video = os.path.basename(str(row[3]))
+    video = os.path.basename(row[3])
     meta  = video.split(".")[0] + ".info.json"
-    if prog: progress = "--progress"
+    if prog: progress = "-progress"
     else: progress = ''
 
     printMarker(True)
     copyCmd = "ipfs files cp /ipfs/" + vhash + " /" + grupe + "/" + video
-#    os.system("echo " + copyCmd)
+    os.system("echo " + copyCmd)
     os.system(copyCmd)
 
     printMarker()
     pinCmd = "ipfs pin add --recursive=true %s /ipfs/%s" % (progress, vhash)
-#    os.system("echo " + pinCmd + "\n")
+    os.system("echo " + pinCmd + "\n")
     os.system(pinCmd + "\n")
 
     printMarker(True)
     copyCmd = "ipfs files cp /ipfs/" + mhash + " /" + grupe + "/" + meta
-#    os.system("echo " + copyCmd)
+    os.system("echo " + copyCmd)
     os.system(copyCmd)
 
     printMarker()
     pinCmd = "ipfs pin add --recursive=true %s /ipfs/%s" % (progress, mhash)
-#    os.system("echo " + pinCmd + "\n")
+    os.system("echo " + pinCmd + "\n")
     os.system(pinCmd + "\n")
 
 
@@ -86,24 +88,32 @@ def copyPinFiles(row, prog):
 # The main loop                                                             #
 #                                                                           #
 #############################################################################
+skip = 0
+OpCounter = 0
 argc = len(sys.argv)
-conn = errors = grupe = sql = progress = False
+conn = errors = sql = grupe = progress = False
 
 try:
     # Parse command line
     if argc > 1:
-        if sys.argv[1] == "-h" or sys.argv[1] == "--help":
+        if sys.argv[1] == "-h":
             usage()
 
         # Required parameter is SQLite database file
-        if argc > 2 and (sys.argv[1] == "-db" or sys.argv[1] == "--database"):
+        if argc > 2 and sys.argv[1] == "-d":
             dbFile = sys.argv[2]
-            conn = sqlite3.connect(dbFile)
+            conn = sqlite3.connect(dbFile) # Failure to open is exception
         else: usage()
 
+        # Option to skip a number of rows in the SQLite database
+        if argc > 4 and sys.argv[3] == "-s":
+            OpCounter = int(sys.argv[4]) * 4  # 4 IPFS operations per DB row
+
         # Only use --progress on IPFS pinning if this option is used
-        if argc > 3 and (sys.argv[3] == "-p" or sys.argv[3] == "--progress"): 
+        lastArg = sys.argv[-1]
+        if lastArg == "-p":
             progress = True
+
     else: usage()
 
     conn.row_factory = sqlite3.Row   # Set query results to dictionary format
@@ -115,9 +125,12 @@ try:
     # Primary loop to obtain the files we'll replicate locally
     sql = "SELECT grupe,mhash,vhash,_filename FROM IPFS_HASH_INDEX order by grupe"
     for row in cursor.execute(sql):
+        skip += 4                            # 4 IPFS operations per DB row,
+        if skip - 4 < OpCounter: continue    # but first row is 0 so minus 4
+
         if row[0] != grupe:
             grupe = row[0]
-#            os.system("echo 'ipfs files mkdir /" + grupe + "'")
+            os.system("echo 'ipfs files mkdir /" + grupe + "'")
             os.system("ipfs files mkdir /" + grupe)
 
         # Process this row into IPFS
