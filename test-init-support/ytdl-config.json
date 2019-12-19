@@ -67,7 +67,7 @@
          "https://www.youtube.com/watch?v=aSingleVideoID"
          "https://www.youtube.com/playlist=myBigVideoPlaylistID"
       ],
-   }
+   },
 
    "MetaColumns": [
       "_filename",
