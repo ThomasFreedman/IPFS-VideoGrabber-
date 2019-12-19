@@ -58,8 +58,16 @@
       ],
       "jPeterson": [
          "https://www.youtube.com/user/weavingspider/videos"
-      ]
-   },
+      ],
+      "catchAll": [
+         "THIS GROUP WILL FAIL, ONLY AND EXAMPLE - REMOVE THESE URLS & THIS LINE"
+         "https://www.youtube.com/user/justAnExample-youtube-channel/videos"
+         "https://www.youtube.com/justAnExample-youtube-playlist"
+         "https://www.youtube.com/yetAnotherExample-youtube-channel/watch?v=_wjfyfh7xjhvg"
+         "https://www.youtube.com/watch?v=aSingleVideoID"
+         "https://www.youtube.com/playlist=myBigVideoPlaylistID"
+      ],
+   }
 
    "MetaColumns": [
       "_filename",
