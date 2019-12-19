@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 #
+# OBSOLETE!!! Use test-init-support/ipfs-getGrupes.py !!!
+#
 # Program to scrape videos and add to IPFS.
 #
 # It also builds a SQLite3 database of IPFS hashes and
