@@ -2,11 +2,13 @@ These python3 scripts use the youtube-dl module and sqlite along with IPFS to do
 
 Youtube-dl is both a python module as well as a command line program that uses it. It is cross-platform, and capable of automating the download of videos from over 1000 sources including youtube, vimeo and bitchute.
 
-Most of the scripts in this folder are originals and obsolete. They require the user to edit the python code to specify the list of URLs and qualifying criteria for videos to download and the IPFS repository to store them in. They also require an external file to specify metadata columns. 
+The scripts in this folder are the newest version refactored and improved from those in the oldVersions subfolder. The originals  required the user to edit the python code to specify the list of URLs and qualifying criteria for videos to download and the IPFS repository to store them in. They also require an external file to specify metadata columns. 
 
-Newer, renamed and refactored versions can be found in the init-test-support folder. ytdl-getGrupes.py no longer uses the shell to add files to IPFS, but instead uses the "subprocess" module to do so, which is more efficient and provides a tighter integration. A single JSON config file allows configuring all but 2 options (the sqlite database file and the JSON config file), inluding various log pathnames, youtube-dl download options, the list of grupes and their URLs to download, and the metadata columns for SQLite.
+Newer, renamed and refactored versions can be found in this folder. ytdl-getGrupes.py no longer uses the shell to add files to IPFS, but instead uses the "subprocess" module to do so, which is more efficient and provides a tighter integration. A single JSON config file allows configuring all but 2 options (the sqlite database file and the JSON config file), inluding various log pathnames, youtube-dl download options, the list of grupes and their URLs to download, and the metadata columns for SQLite.
 
-My plans to create a "Pirate Box" for Ernest Hancock as a repository for his family to share their photos etc privately (so they could stop putting all their info into facebook) are currently on hold, pending downloading videos related to my medical research. I will resume that effort after completing that and a GUI tool to query SQLite to locate videos of interest and launch a viewer. That work will be directly applicable to Ernie's pirate box.
+As of December 2019 I have save over 10,000 videos in IPFS. I am turning my focus towards a search tool with a GUI front end. That will directly be applicable to Earnie's "Pirate Box". 
+
+My plans to create a "Pirate Box" for Ernest Hancock as a repository for his family to share their photos etc privately (so they could stop putting all their info into facebook) are currently on hold, pending completion of the GUI search tool. 
 
 I have determined the basic infrastructure for such a private IPFS network was possible, and files added on any node would be available from all other nodes that shared the same swarm key (a hash that all nodes in the private network must use). I was going to use Zenity to create a basic GUI to perform queries and insert individual files into IPFS. On Sept 19th I outlined the approach I was planning in a Telegram DM to Ernie:
 
