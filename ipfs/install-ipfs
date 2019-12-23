@@ -15,7 +15,7 @@ WAIT=0                             # Default value for single step / debug mode 
 DISTUP=0                           # Default value for dist-upgrade (don't do it!)
 RPI_UFW=0                          # Default value to install firewall on RPi (no)
 GOVER=NoGo                         # Default Go language version (Don't use go version)
-DEFGO=1.10.1                       # Default version to use (tho now -g requires version)
+DEFGO=1.13.4                       # Default version to use (tho now -g requires version)
 
 CONFIG=/home/ipfs/.ipfs/config     # IPFS configuration file
 
@@ -181,7 +181,9 @@ else
   if [ ! -e "/usr/local/bin/ipfs-update" ]; then
     echo "Installing ipfs-update..."
 #   runuser -l ipfs -c 'go get -u github.com/ipfs/ipfs-update' # No worky anymore!
-    curl https://dist.ipfs.io/ipfs-update/v1.5.2/ipfs-update_v1.5.2_linux-arm.tar.gz > ipfsUpdate.tgz
+    # Fix $ARCH if arm to be only "arm", not armv6l OR if  the entire line
+    curl https://dist.ipfs.io/ipfs-update/v1.5.2/ipfs-update_v1.5.2_linux-$ARCH.tar.gz > ipfsUpdate.tgz
+#    curl https://dist.ipfs.io/ipfs-update/v1.5.2/ipfs-update_v1.5.2_linux-arm.tar.gz > ipfsUpdate.tgz
     tar -xzf ipfsUpdate.tgz
     mv ipfs-update/ipfs-update /usr/local/bin/.  # Copy binary into place
     if [ "`which ipfs-update`" != "/usr/local/bin/ipfs-update" ]; then
