@@ -2,7 +2,7 @@ These python3 scripts use the youtube-dl module and sqlite along with IPFS to do
 
 Youtube-dl is both a python module as well as a command line program that uses it. It is cross-platform, and capable of automating the download of videos from over 1000 sources including youtube, vimeo and bitchute.
 
-The scripts in this folder are the newest version refactored and improved from those in the oldVersions subfolder. The originals  required the user to edit the python code to specify the list of URLs and qualifying criteria for videos to download and the IPFS repository to store them in. They also require an external file to specify metadata columns. 
+The scripts in this folder are the newest versions refactored and improved from those in the subfolders. The originals  required the user to edit the python code to specify the list of URLs and qualifying criteria for videos to download and the IPFS repository to store them in. They also require an external file to specify metadata columns. All editing for specifying the download operation is now done in a single JSON formated configuration file, found here in the config subfolder.
 
 Newer, renamed and refactored versions can be found in this folder. ytdl-getGrupes.py no longer uses the shell to add files to IPFS, but instead uses the "subprocess" module to do so, which is more efficient and provides a tighter integration. A single JSON config file allows configuring all but 2 options (the sqlite database file and the JSON config file), inluding various log pathnames, youtube-dl download options, the list of grupes and their URLs to download, and the metadata columns for SQLite.
 
