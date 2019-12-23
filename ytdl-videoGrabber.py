@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Program to scrape videos and add them to IPFS.
+# ytdl-videoGrabber.py - Program to scrape videos and add them to IPFS.
 #
 # It also builds  a  SQLite3 database of IPFS hashes and detailed metadata for
 # each  video.  This  lightweight  SQL engine is filesystem based (no server).
