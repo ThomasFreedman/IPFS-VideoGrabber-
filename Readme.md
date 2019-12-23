@@ -1,3 +1,4 @@
+# ytdl-videoGrabber.py
 These python3 scripts use the youtube-dl module and sqlite along with IPFS to download videos and store them in IPFS. The metadata for each video is stored in the sqlite database, and can be used to search for any video based on over 60 criteria. It will provide 2 IPFS hashes for each video: 1) the video and 2) the metadata file in JSON format.
 
 Youtube-dl is both a python module as well as a command line program that uses it. It is cross-platform, and capable of automating the download of videos from over 1000 sources including youtube, vimeo and bitchute.
@@ -8,6 +9,7 @@ Newer, renamed and refactored versions can be found in this folder. ytdl-getGrup
 
 As of December 2019 I have save over 10,000 videos in IPFS. I am turning my focus towards a search tool with a GUI front end. That will directly be applicable to Earnie's "Pirate Box". 
 
+# Pirate Box
 My plans to create a "Pirate Box" for Ernest Hancock as a repository for his family to share their photos etc privately (so they could stop putting all their info into facebook) are currently on hold, pending completion of the GUI search tool. 
 
 I have determined the basic infrastructure for such a private IPFS network was possible, and files added on any node would be available from all other nodes that shared the same swarm key (a hash that all nodes in the private network must use). I was going to use Zenity to create a basic GUI to perform queries and insert individual files into IPFS. On Sept 19th I outlined the approach I was planning in a Telegram DM to Ernie:
