@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 #
 # ytdl-videoGrabber.py - Program to scrape videos and add them to IPFS.
 #
@@ -56,10 +55,14 @@ Config {
 
     "Grupes": {    # Dictnnry of grupes to download, each with is own criteria
         "gName1": { # Group name containig video selection criteria
-            "urls": ["url1", "url2" ],  # Must be an array, even if only 1 url
             "Duration": 0, # Min size of video in seconds; for no limits use 0
             "Start": null, # Earliest upload date string or (YYYYMMDD) or null
             "End": null    # Latest upload date or null. 1, 2 or neither OK
+            "urls": [      # Must be a list (array), even if only 1 url
+                "url1",
+                "url2",
+                ...
+            ]
         },
         ...
     },
@@ -122,7 +125,8 @@ def openSQLiteDB(columns, dbFile):
     conn = sqlite3.connect(dbFile)
     if newDatabase:
         sql = '''create table if not exists IPFS_HASH_INDEX (
-        "pky" INTEGER PRIMARY KEY AUTOINCREMENT,
+        "sqlts" TIMESTAMP NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'localtime')),
+        "pky"   INTEGER PRIMARY KEY AUTOINCREMENT,
         "g_idx" TEXT,
         "grupe" TEXT,
         "vhash" TEXT,
@@ -140,7 +144,7 @@ def add2IPFS(file):
     lst = []
     cmd = ["ipfs", "add", file]
     out = subprocess.run(cmd, stdout=subprocess.PIPE).stdout.decode('utf-8')
-    return(out.split("\n")[0][6:52])    # Take only the hash
+    return(out.split("\n")[0][6:52])    # Only take the 46 character hash
 
 
 # Create a grupe index file containg a list of all video and metadata IPFS
@@ -274,28 +278,27 @@ def ytdlProcess(conn, config):
     try:
         with youtube_dl.YoutubeDL(dlOpts) as ydl:
             for grupe in grupeList:
-                Grp = grupe                    # Set global var for callback
-                print("\nBEGIN " + grupe)      # Marks start of group in log
+                Grp = grupe                     # Set global var for callback
+                print("\nBEGIN " + grupe)       # Marks start of group in log
 
-                if not os.path.isdir(dlBase + grupe): # Create DL folder for
-                    os.mkdir(dlBase + grupe)          # if it doesn't exist
+                if not os.path.isdir(dlBase + grupe):  # Create DL folder for
+                    os.mkdir(dlBase + grupe)           # if it doesn't exist
 
-                # Add qualifiers for video duration (in seconds) & upload date
-                dr = grupeList[grupe]['Duration']  # from config file values
-                if dr > 0:
-                    d = "duration > %d" % dr    # Minimum, in seconds
-                    ydl.params['match_filter'] = utils.match_filter_func(d)
+                # Add qualifiers for minimum video duration (in seconds)
+                dur = "duration > %d" % grupeList[grupe]['Duration']
+                ydl.params['match_filter'] = utils.match_filter_func(dur)
 
+                # Add release date range qualifier; either one or both OK
                 sd = grupeList[grupe]['Start']  # Use null or YYYYMMDD format
-                ed = grupeList[grupe]['End']    # in JSON, one or both dates
-                if sd or ed:
-                    daterange = utils.DateRange(sd, ed)  # Dates are inclusive
-                    ydl.params['daterange'] = daterange
+                ed = grupeList[grupe]['End']    # in JSON
+                dr = utils.DateRange(sd, ed)    # Dates are inclusive
+                ydl.params['daterange'] = dr    # Always set a date range
 
+                # This will change download file destination folder
                 ydl.params['outtmpl'] = dlBase + grupe + ytdlFileFormat
-                ydl.download(grupeList[grupe]['urls']) # Start downloading!
+                ydl.download(grupeList[grupe]['urls']) # BEGIN DOWNLOADING!!!
 
-                # Complete. create group idx file, add it to IPFS, update DB
+                # Complete. Create group idx file, add it to IPFS, update DB
                 results = updateGrupeIndex(conn, grupe)
                 print("Updated %d rows with grupe index hash %s" % results)
                 print("PROCESSING COMPLETE for %s\n" % grupe)
@@ -305,7 +308,7 @@ def ytdlProcess(conn, config):
                     log.write("END OF FILES FOR %s\n" % grupe)
                     for fName in FinishedFiles:
                         log.write(fName + '\n')
-                    log.write('\n\n')
+                    log.write('\n')
                     log.close()
 
                 # Write a list of download failures as filenames that include id
@@ -328,7 +331,7 @@ def ytdlProcess(conn, config):
 # Parse command line and report config info                                  #
 #                                                                            #
 ##############################################################################
-retryList = None
+retryList = sqlDBfile = None
 if len(sys.argv) >= 5:
     grupes = urls = 0
 
@@ -349,7 +352,8 @@ if len(sys.argv) >= 5:
 
     # Required parameter: -d SQLite database file
     if sys.argv[3] == "-d":
-        Conn = openSQLiteDB(Config['MetaColumns'], sys.argv[4])
+        sqlDBfile = sys.argv[4]
+        Conn = openSQLiteDB(Config['MetaColumns'], sqlDBfile)
         Conn.row_factory = sqlite3.Row          # Results as python dictionary
     if Conn == None: usage()
 
@@ -362,14 +366,27 @@ if len(sys.argv) >= 5:
         os.mkdir(dlBase)
 else: usage()
 
-# regenerateAllGrupeIndexes(Conn)  # Fix all grupe indexes
+#regenerateAllGrupeIndexes(Conn)  # Fix all grupe indexes
 # exit(0)
 
 # Command line and config file processed, time to get down
 if retryList == None:
     ytdlProcess(Conn, Config)
+
+    # Report all of the group indexes
+    print("\nGrupe index file hashes, Videos, Grupes:")
+    sql = "SELECT DISTINCT g_idx, count(*) as videos, grupe"
+    sql += " FROM IPFS_HASH_INDEX GROUP BY grupe ORDER BY grupe;"
+    for cols in Conn.execute(sql):
+        print("%48s | %5d  |  %s" %
+              (cols['g_idx'], cols['videos'], cols['grupe']))
+    Conn.close()
+
+    # Add the SQLite database file to IPFS and report it's hash
+    hash = add2IPFS(sqlDBfile)
+    print("\nHash of the updated SQLite database: %s" % hash)
+
 else:
     pass
 
 exit(0)
-
