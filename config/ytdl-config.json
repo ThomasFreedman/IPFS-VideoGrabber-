@@ -5,157 +5,157 @@
    "DLarch": "youtube-dl.history",
 
    "DLOpts": {
-      "continuedl": true,
+      "retries": 5,
       "format": "best",
+      "continuedl": true,
       "ignoreerrors": true,
-      "merge-output-format": "mp4",
-      "retries": 5
+      "merge-output-format": "mp4"
    },
 
    "Grupes": {
       "bRose": {
+           "Duration": 2400,
+           "Start": "20150101",
+           "End": null,
            "urls": [
                "https://www.youtube.com/LondonRealTV/videos"
-           ],
-           "Duration": 2400,
-           "Start": "20150101",
-           "End": null
+           ]
       },
       "lRose": {
+           "Duration": 0,
+           "Start": null,
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/LarkenRose/videos"
-           ],
-           "Duration": 0,
-           "Start": null,
-           "End": null
+           ]
       },
       "tCamplell": {
+           "Duration": 0,
+           "Start": "20150101",
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/twcjr44/videos "
-           ],
-           "Duration": 0,
-           "Start": "20150101",
-           "End": null
+           ]
       },
       "rBrand": {
-           "urls": [
-               "https://www.youtube.com/russellbrand/videos"
-           ],
            "Duration": 1800,
            "Start": "20170101",
-           "End": null
+           "End": null,
+           "urls": [
+               "https://www.youtube.com/russellbrand/videos"
+           ]
       },
       "mPassio": {
+           "Duration": 0,
+           "Start": "20150101",
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/WhatOnEarth93/videos"
-           ],
-           "Duration": 0,
-           "Start": "20150101",
-           "End": null
+           ]
       },
       "mIgan": {
+           "Duration": 0,
+           "Start": "20150101",
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/thecrowhouse/videos"
-           ],
-           "Duration": 0,
-           "Start": "20150101",
-           "End": null
+           ]
       },
       "freeRoss": {
-           "urls": [
-               "https://www.youtube.com/_NZxivue5Ng"
-           ],
            "Duration": 0,
            "Start": "20191126",
-           "End": null
+           "End": null,
+           "urls": [
+               "https://www.youtube.com/_NZxivue5Ng"
+           ]
       },
       "lukewearechange": {
+           "Duration": 0,
+           "Start": null,
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/lukewearechange/videos"
-           ],
-           "Duration": 0,
-           "Start": null,
-           "End": null
+           ]
       },
       "morse": {
+           "Duration": 0,
+           "Start": null,
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/robertmorsend/videos"
-           ],
-           "Duration": 0,
-           "Start": null,
-           "End": null
+           ]
       },
       "jBerwick": {
+           "Duration": 0,
+           "Start": null,
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/TheAnarchast/videos"
-           ],
-           "Duration": 0,
-           "Start": null,
-           "End": null
+           ]
       },
       "jBergman": {
+           "Duration": 0,
+           "Start": null,
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/johnbchiro/videos"
-           ],
-           "Duration": 0,
-           "Start": null,
-           "End": null
+           ]
       },
       "cDeCarle": {
+           "Duration": 0,
+           "Start": null,
+           "End": null,
            "urls": [
                "https://www.youtube.com/clivedecarle/"
-           ],
-           "Duration": 0,
-           "Start": null,
-           "End": null
+           ]
       },
       "jPeterson": {
-           "urls": [
-               "https://www.youtube.com/user/JordanPetersonVideos/videos"
-           ],
            "Duration": 2400,
            "Start": "20150101",
-           "End": null
+           "End": null,
+           "urls": [
+               "https://www.youtube.com/user/JordanPetersonVideos/videos"
+           ]
       },
       "press4truth": {
+           "Duration": 0,
+           "Start": null,
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/weavingspider/videos"
-           ],
-           "Duration": 0,
-           "Start": null,
-           "End": null
+           ]
       },
       "truthstream": {
+           "Duration": 0,
+           "Start": null,
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/TRUTHstreammedia/videos"
-           ],
-           "Duration": 0,
-           "Start": null,
-           "End": null
+           ]
       },
       "wearechange": {
+           "Duration": 0,
+           "Start": null,
+           "End": null,
            "urls": [
                "https://www.youtube.com/user/wearechange/videos"
-           ],
-           "Duration": 0,
-           "Start": null,
-           "End": null
+           ]
       },
       "wearechange.org": {
+           "Duration": 0,
+           "Start": null,
+           "End": null,
            "urls": [
                "https://wearechange.com"
-           ],
-           "Duration": 0,
-           "Start": null,
-           "End": null
+           ]
       },
       "worldaltmedia": {
-           "urls": [
-               "https://www.youtube.com/channel/UCLdZo0Mkh_z2IQZSmD8Iy0Q/videos"
-           ],
            "Duration": 0,
            "Start": null,
-           "End": null
+           "End": null,
+           "urls": [
+               "https://www.youtube.com/channel/UCLdZo0Mkh_z2IQZSmD8Iy0Q/videos"
+           ]
       }
    },
 
