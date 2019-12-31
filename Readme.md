@@ -7,7 +7,7 @@ The scripts in this folder are the newest versions refactored and improved from 
 
 Newer, renamed and refactored versions can be found in this folder. ytdl-videoGrabber.py no longer uses the shell to add files to IPFS, but instead uses the "subprocess" module to do so, which is more efficient and provides a tighter integration. A single JSON config file allows configuring all but 2 options (the sqlite database file and the JSON config file), inluding various log pathnames, youtube-dl download options, the list of grupes and their URLs to download, and the metadata columns for SQLite.
 
-As of December 2019 I have save over 10,000 videos in IPFS. I am turning my focus towards a search tool with a GUI front end. That will directly be applicable to Earnie's "Pirate Box". 
+As of December 2019 I have save over 11,000 videos in IPFS. I am turning my focus towards a search tool with a GUI front end. That will directly be applicable to Earnie's "Pirate Box". 
 
 # Pirate Box
 My plans to create a "Pirate Box" for Ernest Hancock as a repository for his family to share their photos etc privately (so they could stop putting all their info into facebook) are currently on hold, pending completion of the GUI search tool. 
@@ -18,7 +18,7 @@ I have determined the basic infrastructure for such a private IPFS network was p
 
 2) Only "installer" chores required are setting up brand new SSD for use as a local IPFS repository.
 
-3) Create a simple GUI based on Zenity, write all code in Python3.
+3) Create a simple GUI based on ~~Zenity~~, write all code in Python3 -- **UPDATED**, see below.
 
 4) Use SQLite database as search index for all info added to private IPFS on SSD drive.
 
@@ -28,8 +28,8 @@ I have determined the basic infrastructure for such a private IPFS network was p
 
 7) Create ability to save YT/vimeo/Bitchute videos via Zenity GUI. User enters the URL for a video or playlist, and possibly some very basic qualification criteria such as publish date.
 
-However, I have since learned of a far more robust way to create a GUI 100% in python with the python-tk module. I have no experience using it but have reviewed its' API and looks (relatively) easy, and far more capable than Zenity. 
+However, I have since learned of a far more robust way to create a GUI 100% in python with the ~~python-tk~~ PySimpleGUI module. I have only played around with for a day but love it! It's far more capable than Zenity and will be fun creating a GUI search tool. 
 
 I also established that it is possible to create a public IPFS repo and grab videos, then convert it to a private one rather easily. This breaks the IPFS web interface, so that must be installed after the conversion, if you want it on the private network.
 
-That was the last thing I accomplished before my putting the project aside to deal with health issues.
+That was the last thing I accomplished before my putting the project aside to deal with health issues. As of 12-31-2019 I must put coding aside again (just when it was getting fun too) to focus on my health. Be back at it when I can.
