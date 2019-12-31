@@ -26,7 +26,7 @@ I have determined the basic infrastructure for such a private IPFS network was p
 
 6) Launch appropiate viewer (VLC for images and videos, file manager for folders, others based on file extention).
 
-7) Create ability to save YT/vimeo/Bitchute videos via Zenity GUI. User enters the URL for a video or playlist, and possibly some very basic qualification criteria such as publish date.
+7) Create ability to save YT/vimeo/Bitchute videos via GUI. User enters the URL for a video or playlist, and possibly some very basic qualification criteria such as publish date.
 
 However, I have since learned of a far more robust way to create a GUI 100% in python with the ~~python-tk~~ PySimpleGUI module. I have only played around with for a day but love it! It's far more capable than Zenity and will be fun creating a GUI search tool. 
 
