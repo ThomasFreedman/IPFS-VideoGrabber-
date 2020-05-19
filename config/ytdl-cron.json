@@ -1,0 +1,206 @@
+{
+   "Comments": [ "This section is not currently referenced by the code, it",
+                 "is only here to provide info for this configuration file.",
+
+                 "CONVENTIONS:",
+                 "Generally download groups are named according to the author",
+                 "using the first letter of their first name in lower case,",
+                 "followed by their last name capitalized. Some grupes are",
+                 "named by the channel name, such as truthstream or aCensored.",
+                 "Grupes are listed in this config file in alphabetic order of",
+                 "their names, ascending."
+   ],
+   "DLbase": "/home/ipfs/ytDL/",
+   "DLeLog": "error.log",
+   "DLarch": "youtube-dl.history",
+
+   "DLOpts": {
+      "retries": 5,
+      "format": "best",
+      "continuedl": true,
+      "ignoreerrors": true,
+      "merge-output-format": "mp4"
+   },
+
+   "Grupes": {
+      "aCensored": {
+           "Quota": 0,
+           "Active": false,
+           "Duration": 0,
+           "Start": null,
+           "End": null,
+           "Stop": 100,
+           "urls": [
+               "https://www.altcensored.com/watch?v=q8AJUo-zJP4",
+               "https://www.altcensored.com/watch?v=7y5e9CZeoBg"
+           ]
+      },
+      "bRose": {
+           "Quota": 0,
+           "Active": true,
+           "Duration": 2700,
+           "Start": "20200315",
+           "End": null,
+           "Stop": 100,
+           "urls": [
+               "https://www.youtube.com/user/LondonRealTV/videos&sord=dd",
+               "https://seed200.bitchute.com/weBLW8e6mgIB/H4W7FwBy0Ukh.mp4"
+           ]
+      },
+      "dBigtree": {
+           "Quota": 0,
+           "Active": true,
+           "Duration": 1200,
+           "Start": "20200315",
+           "End": null,
+           "Stop": 50,
+           "urls": [
+               "https://www.youtube.com/channel/UCq6oOuhSx7ESreh6m9LGy6Q/videos&sort=dd"
+           ]
+      },
+      "jBerwick": {
+           "Quota": 0,
+           "Active": true,
+           "Duration": 0,
+           "Start": "20200301",
+           "End": null,
+           "Stop": 100,
+           "urls": [
+               "https://www.youtube.com/user/TheAnarchast/videos&sort=dd"
+           ]
+      },
+      "jPeterson": {
+           "Quota": 0,
+           "Active": true,
+           "Duration": 300,
+           "Start": "20200301",
+           "End": null,
+           "Stop": 50,
+           "urls": [
+               "https://www.youtube.com/user/JordanPetersonVideos/videos&sort=dd"
+           ]
+      },
+      "lRose": {
+           "Quota": 0,
+           "Active": true,
+           "Duration": 0,
+           "Start": null,
+           "End": null,
+           "Stop": 10,
+           "urls": [
+               "https://www.youtube.com/user/LarkenRose/videos&sort=dd"
+           ]
+      },
+      "rBrand": {
+           "Quota": 0,
+           "Active": true,
+           "Duration": 2700,
+           "Start": "20200301",
+           "End": null,
+           "Stop": 50,
+           "urls": [
+               "https://www.youtube.com/russellbrand/videos&sord=dd"
+           ]
+      },
+      "truthstream": {
+           "Quota": 0,
+           "Active": true,
+           "Duration": 0,
+           "Start": null,
+           "End": null,
+           "Stop": 100,
+           "urls": [
+               "https://www.youtube.com/watch?v=LQucESRF3Sg",
+               "https://www.youtube.com/user/TRUTHstreammedia/videos&sort=dd"
+           ]
+      },
+      "singles": {
+           "Quota": 0,
+           "Active": true,
+           "Duration": null,
+           "Start": null,
+           "End": null,
+           "Stop": 100,
+           "urls": [
+               "https://www.youtube.com/watch?v=P-FA1HxzwqE",
+               "https://www.youtube.com/watch?v=QFAOlCUs8mY",
+               "https://www.youtube.com/watch?v=Xj8GwfD5aG8"
+           ]
+      },
+      "sSkouras": {
+           "Quota": 0,
+           "Active": true,
+           "Duration": 0,
+           "Start": "20200301",
+           "End": null,
+           "Stop": 100,
+           "urls": [
+               "https://www.youtube.com/channel/UCkKOQNYoZjaa_8V0uPOueeQ/videos&sort=dd",
+               "https://www.bitchute.com/channel/IiUMdsNGJBE2/?sort=dd"
+           ]
+      }
+   },
+
+   "MetaColumns": [
+      "_filename",
+      "abr",
+      "acodec",
+      "age_limit",
+      "album",
+      "alt_title",
+      "annotations",
+      "artist",
+      "average_rating",
+      "categories_0",
+      "channel_id",
+      "channel_url",
+      "creator",
+      "description",
+      "dislike_count",
+      "display_id",
+      "duration",
+      "end_time",
+      "episode_number",
+      "ext",
+      "extractor",
+      "extractor_key",
+      "format",
+      "format_id",
+      "format_note",
+      "fulltitle",
+      "height",
+      "http_headers_Accept",
+      "http_headers_Accept-Charset",
+      "http_headers_Accept-Encoding",
+      "http_headers_Accept-Language",
+      "http_headers_User-Agent",
+      "id",
+      "is_live",
+      "license",
+      "like_count",
+      "player_url",
+      "playlist",
+      "playlist_index",
+      "protocol",
+      "release_date",
+      "release_year",
+      "season_number",
+      "series",
+      "start_time",
+      "thumbnail",
+      "thumbnails_0_id",
+      "thumbnails_0_url",
+      "title",
+      "track",
+      "upload_date",
+      "uploader",
+      "uploader_id",
+      "uploader_url",
+      "url",
+      "vcodec",
+      "view_count",
+      "webpage_url",
+      "webpage_url_basename",
+      "width"
+   ]
+}
