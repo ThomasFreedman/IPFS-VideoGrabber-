@@ -1,6 +1,6 @@
 # ytdl-videoGrabber.py
 ## NOTE (May 18th, 2020): 
-Many changes have been done, including the use of threads to process each video and emailing results. More to come soon when I upload the new code.
+Many changes have been done, including the use of threads to process each video and emailing results. 
 
 These python3 scripts use the youtube-dl module and sqlite along with IPFS to download videos and store them in IPFS. The metadata for each video is stored in the sqlite database, and can be used to search for any video based on over 60 criteria. It will provide 2 IPFS hashes for each video: 1) the video and 2) the metadata file in JSON format.
 
