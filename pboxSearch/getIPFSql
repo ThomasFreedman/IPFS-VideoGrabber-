@@ -2,7 +2,7 @@
 
 if [ $# -lt 1 ]; then
   echo "Usage: $0 <tx|ny>"
-  echo " Download most recent SQLite file from IPFS for TX or NY server."
+  echo " Download most recent SQLite file from IPFS for TX or NY server"
   echo " Save as YR-MO-DY_[tx|ny].sqlite"
   exit 1
 fi
