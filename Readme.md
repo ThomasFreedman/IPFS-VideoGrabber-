@@ -1,3 +1,7 @@
+## UPDATE (Feb268th, 2021):
+I have completed the preliminary search GUI app which is found in the pboxSearch folder. Rudimentary, proof of concept without IPFS integration.
+I have also updated the ytdl-VideoGrabber files with most recent tweaks & changes which are relatively minor functionally.
+
 # ytdl-videoGrabber.py
 ## NOTE (May 18th, 2020): 
 Many changes have been done, including the use of threads to process each video and emailing results. 
@@ -36,7 +40,3 @@ However, I have since learned of a far more robust way to create a GUI 100% in p
 I also established that it is possible to create a public IPFS repo and grab videos, then convert it to a private one rather easily. This breaks the IPFS web interface, so that must be installed after the conversion, if you want it on the private network.
 
 That was the last thing I accomplished before my putting the project aside to deal with health issues. As of 12-31-2019 I must put coding aside again (just when it was getting fun too) to focus on my health. Be back at it when I can.
-
-## UPDATE (Feb268th, 2021):
-I have completed the preliminary search GUI app which is found in the pboxSearch folder. Rudimentary, proof of concept without IPFS integration.
-I have also updated the ytdlVideoGrabber files with most recent tweaks & changes which are relatively minor functionally.
