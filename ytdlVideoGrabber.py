@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+#!/usr/local/bin/python3
+
 #
 # ytdlVideoGrabber.py - Program to scrape videos and add them to IPFS.
 #
@@ -29,6 +30,7 @@ from __future__ import unicode_literals
 from email.message import EmailMessage
 from ytdlServerDefinitions import *        # Server specific CONSTANTS
 from youtube_dl import utils
+from tinytag import TinyTag                # To get meta info from MP3 files
 from datetime import *
 import youtube_dl
 import subprocess
@@ -37,14 +39,21 @@ import smtplib
 import sqlite3
 import time
 import json
+import ssl
 import sys
 import os
+import re
+
 
 #
 # Global Variables
 #
 SQLrows2Add     = []    # Lists populated by download callback threads
 ErrorList       = []
+# A bit of a kludge so we can detect when youtube-dl says "Too Many Requests"
+# Need to clean up by trapping exception but resume dowload process. Perhaps
+# better to abort run entirely upon detection of this specific error.
+THIS_RUN        = os.path.dirname(os.path.realpath(__file__)) + '/thisRun.log'
 
 # Loaded from config file specified on command line (JSON file format).
 # This variable will remain empty until the config file is read.
@@ -132,9 +141,20 @@ def flatten_json(nested_json):
 # MetaColumns from Config. If it already exists, open a connection
 # to it. Always returns a connection object to the dbFile.
 def openSQLiteDB(columns, dbFile):
+    global DOWNLOAD_IP, IP_ADR_LIST, IP_ADR_INDX
     newDatabase = not os.path.exists(dbFile)
     conn = sqlite3.connect(dbFile)
     if newDatabase:
+        sql = '''create table if not exists IPFS_INFO (
+        "sqlts"     TIMESTAMP NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'localtime')),
+        "pky"       INTEGER PRIMARY KEY AUTOINCREMENT,
+        "ip_indx"   INTEGER DEFAULT 0,
+        "ip_addr"   TEXT,
+        "db_hash"   TEXT,
+        "dl_good"   INTEGER DEFAULT 0,
+        "dl_errs"   INTEGER DEFAULT 0);'''
+        conn.execute(sql)
+
         sql = '''create table if not exists IPFS_HASH_INDEX (
         "sqlts" TIMESTAMP NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'localtime')),
         "pky"   INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,11 +162,25 @@ def openSQLiteDB(columns, dbFile):
         "grupe" TEXT,
         "vhash" TEXT,
         "mhash" TEXT'''
-
         for c in columns:
             sql += ',\n\t"' + c + '" TEXT'
         sql += ')'
         conn.execute(sql)
+
+        # Set initial values for download IP address & address list index
+        sql = '''INSERT INTO IPFS_INFO ("ip_addr", "ip_indx") 
+                 VALUES (?,?);'''
+        conn.execute(sql, (DOWNLOAD_IP, IP_ADR_INDX))
+        conn.commit()
+
+    # Initialize DOWNLOAD_IP with IP address used on last run
+    else:
+        sql = "SELECT ip_indx FROM IPFS_INFO "
+        sql += "WHERE sqlts = (SELECT max(sqlts) FROM IPFS_INFO);"
+        idx = int(conn.execute(sql).fetchone()[0])
+        IP_ADR_INDX = idx
+        DOWNLOAD_IP = IP_ADR_LIST[ IP_ADR_INDX ]
+
     return conn
 
 
@@ -159,11 +193,82 @@ def add2IPFS(file):
     return(out.split("\n")[0][6:52])    # Only take the 46 character hash
 
 
-# Create a grupe index file containg a list of all video and metadata IPFS
+# Add the updated SQLite DB to IPFS under the static IPNS name associated with
+# STATIC_DB_HASH. The most recent DB can always be obtained by wget:
+# https://ipfs.io/ipns/<STATIC_DB_HASH value>
+def publishDB(file):
+    newDBhash = add2IPFS(file)
+    if len(newDBhash) == 46:
+        lst = []
+        cmd = ["ipfs", "name", "publish", "-key=" + STATIC_DB_HASH, newDBhash]
+        cp = subprocess.run(cmd, capture_output=True, text=True)
+        if cp.returncode == 0:
+            #print('>' + cp.stdout + '|' + cp.stderr + '|%d<' % cp.returncode)
+            published = cp.stdout[77:123]  # Grab the last hash in output
+            return newDBhash
+        else:
+            print(cp.stderr)
+            return ""
+    else: return ""
+
+
+# Reopen the SQL DB and update the IPFS_INFO table with info for this run.
+def updateRunInfo(config, sqlFile, dbHash, good, errs):
+    global IP_ADR_INDX, DOWNLOAD_IP
+
+    conn = openSQLiteDB(config['MetaColumns'], sqlFile)
+    conn.row_factory = sqlite3.Row  # Results as python dictionary
+    sql = '''INSERT INTO IPFS_INFO ("ip_indx", "ip_addr", "db_hash", 
+                                    "dl_good", "dl_errs")
+             VALUES (?,?,?,?,?);'''
+
+    if conn is not None:
+        conn.execute(sql, (IP_ADR_INDX, DOWNLOAD_IP, dbHash, good, errs))
+        conn.commit()
+        conn.close()
+
+
+# Filter the list of URLs provided in config file to skip URLs we've already
+# DL'd. Filtering is based on the video ID for single videos only. This isn't
+# of much value b/c most URLs are for a channel or playlist.
+def filterUrls(conn, configUrls):
+    regx = re.compile(r'^.*?watch\?v=([^&]+)&*.*$', re.IGNORECASE)
+    cursor = conn.cursor()
+    filteredUrls = []
+    for url in configUrls:
+        match = re.search(regx, url)
+        if match is not None:   # Is this a single video url?
+            id = match.group(1)
+            sql = "SELECT COUNT(*) FROM IPFS_HASH_INDEX WHERE id = ?;"
+            if cursor.execute(sql, [id]).fetchone()[0] == 0:
+                filteredUrls.append(url)
+        else: filteredUrls.append(url)
+    return filteredUrls
+
+
+# Switch to the next IP address in list if HttpError 429 occurs
+def switch2nextIP():
+    IP_ADR_INDX = (IP_ADR_INDX + 1) % len(IP_ADR_INDX)
+    DOWNLOAD_IP = IP_ADR_LIST[IP_ADR_INDX]
+    print("Too many requests, switching to IP=%s" % DOWNLOAD_IP)
+
+
+# Check for http error 429 and switch to a different IP if necessary. Only way
+# to detect that error is scan the log file for it. Youtube-dl doesn't provide
+# a way to throw specific errors and ignore the rest. This isn't very elegant!
+def changeIPifNeeded():
+    for line in list(open(THIS_RUN, 'r')):
+        line = str(line).lower()
+        if "too many requests" in line:
+            switch2nextIP()
+            break
+
+
+# Create a grupe index file containing a list of all video and metadata IPFS
 # hashes for the group. Add it to IPFS & return the hash and count of rows
 # updated.
 def updateGrupeIndex(conn: object, grupe: object) -> object:
-    cursor    = conn.cursor()
+    cursor = conn.cursor()
 
     idxFile = "/tmp/%s_idx.txt" % grupe
     idx = open(idxFile, "w")
@@ -179,7 +284,7 @@ def updateGrupeIndex(conn: object, grupe: object) -> object:
         cursor.execute(sql, (hash, grupe))
         conn.commit()
         os.remove(idxFile)
-    return (cursor.rowcount, hash)
+    return cursor.rowcount, hash
 
 
 #    This block of code will create group index files for every group in DB,
@@ -236,35 +341,48 @@ def addRow(conn, cols, gvmjList):
     try:
         row = addRow2db(conn, cols, gvmjList)   # Attempt number one...
 
-    # On failure create a new metadata dictionary for this video. For any
-    # missing keys, create a key whose value is "unknown-value". This will get
-    # around issues related to the JSON metadata
+    # On failure create a new metadata dictionary for this file. For any
+    # missing keys, create a key whose value is "unknown-value". This is
+    # a work-around for issues related to missing JSON metadata fields.
     except Exception as e:
         newDictionary = {}
+        (grp, vhash, mhash, jsn) = gvmjList
         for col in cols:
-            if col in gvmjList[3].keys():
-                newDictionary[col] = gvmjList[3][col]
+            # If this download is an MP3 file and source is not youtube,
+            #   pull some info directly from ID3 tags of the MP3 file.
+            if col == "_filename":
+                file = jsn[col]
+                type = file.rsplit('.')[1].lower()
+                ytdl = jsn["extractor"]
+                if type == "mp3" and ytdl != "youtube":
+                    id3 = TinyTag.get(file)
+                    if id3.year : jsn["release_year"] = id3.year
+                    if id3.title: jsn["title"] = id3.title
+                    if id3.artist: jsn["artist"] = id3.artist
+                    if id3.duration: jsn["duration"] = id3.duration
+
+            if col in jsn.keys():
+                newDictionary[col] = jsn[col]
             else: newDictionary[col] = "unknown-value"
 
         # Try again. Any exception this time will propagate upstream
-        (grp, vhash, mhash, jsn) = gvmjList
         row = addRow2db(conn, cols, (grp, vhash, mhash, newDictionary))
 
     return row
 
 
-# Add a row to the SQLite database for every video downloaded for this grupe,
-# print the downloads and failures and log the failures to the error log file.
+# Add a row to the SQLite database for every video  downloaded for this grupe,
+# print the successes and failures and log the failures to the error log file.
 def processGrupeResults(conn, cols, urls, grupe, eLog):
     global ErrorList, SQLrows2Add
     downloads = len(SQLrows2Add)
-    rowz = 0
+    good = 0
 
     if downloads > 0:
         for dat in SQLrows2Add:  # dat = (grp, vhash, mhash, json)
             try:
                 row = addRow(conn, cols, dat)
-                rowz += rowz + 1 # Sucessfully added to SQLite
+                good += 1   # Sucessfully added to SQLite
                 mark = datetime.now().strftime("%a %H:%M:%S")
                 refs = "video=%s, metadata=%s" % (dat[1], dat[2])
                 print("%s row=%d, %s" % (mark, row, refs))
@@ -279,8 +397,8 @@ def processGrupeResults(conn, cols, urls, grupe, eLog):
                     er += "%32s = %s\n" % (col, dat3[col])
                 ErrorList.append(er)
 
-        print("%d downloads, %d DB rows added" % (downloads, rowz))
-        args = (rowz, updateGrupeIndex(conn, grupe))
+        print("%d downloads, %d DB rows added" % (downloads, good))
+        args = (updateGrupeIndex(conn, grupe))
         print("Updated %d rows with grupe index hash %s\n" % args)
 
     # Print and log the list of download failures
@@ -292,8 +410,8 @@ def processGrupeResults(conn, cols, urls, grupe, eLog):
         eLog.write("END OF ERRORS FOR %s\n\n" % grupe)
 
     args = (urls, downloads, failures)
-    print("URLs Processed=%d (Downloaded=%d, Failed=%d)" % args)
-    return rowz
+    print("URLs Processed=%d (Succeeded=%d, Failed=%d)" % args)
+    return good, failures
 
 
 # Used to determine if folder size limit has been exceeded. NOT recursive
@@ -314,7 +432,7 @@ def getSize(path):
 # aren't counted in a file count quota, but they are for folder space quotas.
 # Removals always remove all files of the same name  regardless of extension,
 # HOWEVER, wildcard replacement occurs after the 1st . on the left. Also note
-# that pruning will never remove the last remaining audio file.
+# that pruning will never remove the last remaining file.
 def pruneDir(quota, dir):
     global ErrorList
     max = count = 0
@@ -330,12 +448,12 @@ def pruneDir(quota, dir):
             return False
 
         for f in os.listdir(dir):           # Create a list of candidate files
-            if f.endswith(EXT_LIST):        # Only include primary audio files
+            if f.endswith(EXT_LIST):        # Only include primary video files
                 fList.append(dir + '/' + f) # Prefix the file with path
                 count += 1                  # Count how many in the list
         if count < 2: return False          # We're done if none or only 1
 
-        old = min(fList, key=os.path.getctime)   # Get oldest audio file
+        old = min(fList, key=os.path.getctime)   # Get oldest file
 
         if len(q) > 1: size = 0             # Quota limits number of files
         else: size = getSize(dir)           # Quota limits space used
@@ -346,8 +464,8 @@ def pruneDir(quota, dir):
         else: return False
 
 
-# This function is a thread of execution started with each completed download.
-# It is started as a daemon thread to add the video and its' metadata to IPFS,
+# This function is a process thread started with each successful download. It
+# is started as a daemon thread to add the video and its' metadata to IPFS,
 # and creates lists for errors and the files downloaded (to update SQLite).
 def processVideo(file):
     global Config, ErrorList, SQLrows2Add
@@ -356,25 +474,26 @@ def processVideo(file):
     grp = file.rsplit('/', 2)[1]      # Extract grupe from file pathname
     pb = os.path.splitext(file)[0]    # Path + Basename in list index 0
     mFile = pb + ".info.json"         # json metadata file for this download
-    vFile = file                      # Full pathname of downloaded video file
+    vFile = file                      # Full pathname of downloaded file
     dir, base = file.rsplit('/', 1)   # Separate grupe folder & downloaded file
 
     # The grupe quota limits the size of the download folder. It's a string
     # containing an integer with a space followed by an optional units word.
     quota = Config["Grupes"][grp]["Quota"] # i.e. "20 files" or "2500000000"
     pruned = False
-    while pruneDir(quota, dir):       # Keep pruning until under quota
+    while pruneDir(quota, dir):        # Keep pruning until under quota
         time.sleep(0.01)
         pruned = True
     if pruned: ErrorList.append("WARNING: Folder limit reached and pruned!")
 
     # Log all errors, but add to SQLite if we got a valid video hash from IPFS
     try:
-        vHash = add2IPFS(vFile)        # Add video file to IPFS
-        mHash = add2IPFS(mFile)        # Add the metadata file to IPFS
-        with open(mFile, 'r') as jsn:  # Read the entire JSON metadata file
-            jDict = json.load(jsn)     # Create a python dictionary from it
-        jFlat = flatten_json(jDict)    # Flatten the dictionary
+        vHash = add2IPFS(vFile)           # Add video file to IPFS
+        mHash = add2IPFS(mFile)           # Add the metadata file to IPFS
+        if len(vHash) + len(mHash) == 92: # Continue if valid hashes
+            with open(mFile, 'r') as jsn: # Read the entire JSON metadata file
+                jDict = json.load(jsn)    # Create a python dictionary from it
+            jFlat = flatten_json(jDict)   # Flatten the dictionary
 
     except Exception as e:             # Log any errors that may have occurred
         args = (grp, vHash, mHash, base, e)
@@ -382,15 +501,15 @@ def processVideo(file):
 
     # If vHash is valid create a SQLite entry for it, regardless of metadata
     finally:
-        if len(vHash) == 46 and vHash[0] == 'Q':  # Valid vHash?  If so add it
-            SQLrows2Add.append([grp, vHash, mHash, jFlat])  # to SQLite DB
+        if vHash[0] == 'Q':
+            SQLrows2Add.append([grp, vHash, mHash, jFlat])  # add to SQLite DB
 
 
 # Starts a daemon thread to process the downloaded file. youtube-dl provides no
 # way to obtain information about the ffmpeg post processor, and adding to IPFS
 # can be time consuming.  Using  threads to handle files allows the main thread
 # 2 download other files concurrently with IPFS additions. See the processVideo
-# function above for specifics of how the downloaded file is processed.
+# function above for specifics of how downloaded files are processed.
 def callback(d):
     if d['status'] == 'finished':
         path = d['filename']             # Callback provides full pathname
@@ -414,9 +533,12 @@ def ytdlProcess(config, conn):
     dlElog          = dlBase + config['DLeLog']
     dlOpts          = config['DLOpts']
     grupeList       = config['Grupes']
-    completed       = 0
-    # NOTE: items missing from extractor's metadata will be replaced with "NA"
+    total           = 0
+    failures        = 0
+    # NOTE: items missing from metadata will be replaced with "unknown-value"
     ytdlFileFormat  = "/%(id)s" + sep + "%(duration)s"+ sep + ".%(ext)s"
+
+    dlOpts['ignoreerrors'] = True              # TEMPORARY ?????
 
     # Add crucial download options. Some options MUST be added in the DL loop
     # dlOpts['force-ipv6'] = True                # May not be enabled on host
@@ -426,62 +548,63 @@ def ytdlProcess(config, conn):
     dlOpts['download_archive'] = dlArch        # Facilitates updates w/o dupes
     dlOpts['restrictfilenames'] = True         # Required format for DLd files
     eLog = open(dlElog, mode='a+')             # Error log file for all grupes
-    try:
-        with youtube_dl.YoutubeDL(dlOpts) as ydl:
-            for grupe in grupeList:
-                if not grupeList[grupe]['Active']: continue # Skip this grupe
-                SQLrows2Add = []               # Empty the list of downloads
-                ErrorList = []                 # Empty the list of errors
-                print("\nBEGIN " + grupe)      # Marks start of group in log
+    with youtube_dl.YoutubeDL(dlOpts) as ydl:
+        for grupe in grupeList:
+            if not grupeList[grupe]['Active']: continue # Skip this grupe
+            SQLrows2Add = []               # Empty the list of downloads
+            ErrorList = []                 # Empty the list of errors
+            print("\nBEGIN " + grupe)      # Marks start of group in log
 
-                if not os.path.isdir(dlBase + grupe):  # If it doesn't exist
-                    os.mkdir(dlBase + grupe)           #  create folder 4 grupe
+            if not os.path.isdir(dlBase + grupe):  # If it doesn't exist
+                os.mkdir(dlBase + grupe)           #  create folder 4 grupe
 
-                # Add qualifier for minimum video duration (in seconds)
-                dur = grupeList[grupe]['Duration']
-                if dur != None and dur > 0:
-                    dur = "duration > %d" % dur
-                    ydl.params['match_filter'] = utils.match_filter_func(dur)
-                elif 'match_filter' in ydl.params.keys():
-                    del ydl.params['match_filter']  # No duration filter
+            # Add qualifier for minimum video duration (in seconds)
+            dur = grupeList[grupe]['Duration']
+            if dur != None and dur > 0:
+                dur = "duration > %d" % dur
+                ydl.params['match_filter'] = utils.match_filter_func(dur)
+            elif 'match_filter' in ydl.params.keys():
+                del ydl.params['match_filter']  # No duration filter
 
-                # Add release date range qualifier; either one or both are OK
-                sd = grupeList[grupe]['Start']      # null or YYYYMMDD format
-                ed = grupeList[grupe]['End']        # in JSON
-                if sd != None or ed != None:
-                    dr = utils.DateRange(sd, ed)    # Dates are inclusive
-                    ydl.params['daterange'] = dr    # Always set a date range
-                elif 'daterange' in ydl.params.keys():
-                    del ydl.params['daterange']     # No date filter
+            # Add release date range qualifier; either one or both are OK
+            sd = grupeList[grupe]['Start']      # null or YYYYMMDD format
+            ed = grupeList[grupe]['End']        # in JSON
+            if sd != None or ed != None:
+                dr = utils.DateRange(sd, ed)    # Dates are inclusive
+                ydl.params['daterange'] = dr    # Always set a date range
+            elif 'daterange' in ydl.params.keys():
+                del ydl.params['daterange']     # No date filter
 
-                # This stops downloading from playlist after this many videos
-                stop = grupeList[grupe]['Stop']
-                if stop != None and stop > 0: ydl.params['playlistend'] = stop
-                elif 'playlistend' in ydl.params.keys():
-                    del ydl.params['playlistend']   # No playlist limit
+            # This stops downloading from playlist after this many videos
+            stop = grupeList[grupe]['Stop']
+            if stop != None and stop > 0: ydl.params['playlistend'] = stop
+            elif 'playlistend' in ydl.params.keys():
+                del ydl.params['playlistend']   # No playlist limit
 
-                # This will change downloaded file folder for each grupe
-                ydl.params['outtmpl'] = dlBase + grupe + ytdlFileFormat
-                urls = grupeList[grupe]['urls']
-                ydl.download(urls)              # BEGIN DOWNLOADING!!!
-                print("YOUTUBE-DL PROCESSING COMPLETE for %s" % grupe)
+            # This will change downloaded file folder for each grupe
+            ydl.params['outtmpl'] = dlBase + grupe + ytdlFileFormat
+            urls = grupeList[grupe]['urls']
 
-                # Wait for all callback threads to finish
-                for th in threading.enumerate():
-                    if th.name != "MainThread":
-                        th.join()
+            # Don't even try downloading videos we already have in the DB
+            newUrls = filterUrls(conn, urls)
 
-                # Log errors and print results of this DL grupe
-                rowz = processGrupeResults(conn, cols, len(urls), grupe, eLog)
-                completed += rowz
+            ydl.download(newUrls)       # BEGIN DOWNLOADING!!!
 
-    except Exception as e:
-        err = "ytdlProcess exception: Grupe=%s:\n%s" % (grupe, e)
-        eLog.write(err + '\n')
-        print(err)
+            print("YOUTUBE-DL PROCESSING COMPLETE for %s" % grupe)
+
+            # Wait for all callback threads to finish
+            for th in threading.enumerate():
+                if th.name != "MainThread":
+                    th.join()
+
+            # Log errors and print results of this DL grupe
+            good, fails = processGrupeResults(conn, cols,
+                                                len(urls), grupe, eLog)
+            total += good
+            failures += fails       # Accumulate totals for this run
 
     eLog.close()
-    return completed
+    return total, failures
 
 #
 # Display a summary of this download session. Return them for emailing.
@@ -501,9 +624,9 @@ def displaySummary(conn):
         mail += "%48s | %5d  |  %s\n" % args
         print("%48s | %5d  |  %s" % args)
     # Print the total number of files in all grupes
-    cursor = conn.cursor().execute("SELECT COUNT(*) FROM IPFS_HASH_INDEX;")
+    dbObj = conn.cursor().execute("SELECT COUNT(*) FROM IPFS_HASH_INDEX;")
     total  = "                                            Total: "
-    total += "%5d\n" % cursor.fetchone()[0]
+    total += "%5d\n" % dbObj.fetchone()[0]
     print(total)
     mail += total
     #
@@ -522,9 +645,9 @@ def displaySummary(conn):
         print("%5s | %6d | %s" % args)
     # Print the total number of files downloaded in last 30 days
     sql = "SELECT COUNT(*) FROM IPFS_HASH_INDEX WHERE sqlts > "
-    cursor = conn.cursor().execute(sql + "'" + strt + "';")
+    dbObj = conn.cursor().execute(sql + "'" + strt + "';")
     total = " Total:  "
-    total += "%5d" % cursor.fetchone()[0]
+    total += "%5d" % dbObj.fetchone()[0]
     print(total)
     mail += total
     #
@@ -545,7 +668,7 @@ def displaySummary(conn):
             urls += text + '\n'
             print(text)
 
-    return [mail, urls]
+    return mail, urls
 
 
 # Send a plain text message via email to recipient(s)
@@ -556,10 +679,11 @@ def emailResults(server, account, subject, origin, to, text):
     msg['From'] = origin
     msg['To'] = to
 
-    emailer = smtplib.SMTP_SSL(server[0], server[1])
-    emailer.login(account[0], account[1])
-    emailer.send_message(msg)
-    emailer.quit()
+    context = ssl.create_default_context()
+    with smtplib.SMTP(server[0], server[1]) as emailer:
+        emailer.starttls(context=context)
+        emailer.login(account[0], account[1])
+        emailer.send_message(msg)
 
 
 ##############################################################################
@@ -599,7 +723,7 @@ def getCmdLineArgs():
         if not os.path.isdir(config['DLbase']):  # Create folder for results
             os.mkdir(config['DLbase'])           #  if necessary
 
-        return (config, conn, sqlDBfile)         # Return essential information
+        return config, conn, sqlDBfile         # Return essential information
     else: usage()
 
 ##############################################################################
@@ -609,31 +733,37 @@ def getCmdLineArgs():
 # ############################################################################
 def main():
     global Config
+    hash = None
     Config, conn, sqlFile = getCmdLineArgs()     # Read config file, open DB
 
     #regenerateAllGrupeIndexes(conn)             # Fix all grupe indexes
     #exit(0)
 
     # Command line and config file processed, time to get down to it
-    completed = ytdlProcess(Config, conn)
+    good, fails = ytdlProcess(Config, conn)
 
-    mail = displaySummary(conn)
+    mail, urls = displaySummary(conn)
     conn.close()
 
-    # If any downloads were completed, update IPFS with new SQLite file
-    if completed > 0:
-        hash = add2IPFS(sqlFile)
-        args = "\nHash of the updated SQLite database: %s" % hash
-        mail[0] += args
+    # If any downloads were successful, update IPFS with new SQLite file
+    if good > 0:
+        hash = publishDB(sqlFile)
+        args = "\nThe newest SQLite DB "
+        args += "(%s) can be always be obtained with:\n" % hash
+        args += "https://ipfs.io/ipns/%s" % STATIC_DB_HASH
+        mail += args
         print(args + "\n")
+
+    # Update IPFS_INFO table in SQL DB with results for this run
+    updateRunInfo(Config, sqlFile, hash, good, fails)
 
     if SEND_EMAIL:
         emailResults(EMAIL_SERVR, EMAIL_LOGIN,
-                     EMAIL_SUB1, EMAIL_FROM, EMAIL_LIST, mail[0])
+                     EMAIL_SUB1, EMAIL_FROM, EMAIL_LIST, mail)
 
-        if len(EMAIL_URLS) > 0 and len(mail[1]) > 0:
+        if len(EMAIL_URLS) > 0 and len(urls) > 0:
             emailResults(EMAIL_SERVR, EMAIL_LOGIN,
-                         EMAIL_SUB2, EMAIL_FROM, EMAIL_URLS, mail[1])
+                         EMAIL_SUB2, EMAIL_FROM, EMAIL_URLS, urls)
 
 
 ###############################################################################
