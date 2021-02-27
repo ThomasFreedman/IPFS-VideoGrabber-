@@ -1,0 +1,115 @@
+#!/usr/bin/python3
+import PySimpleGUI as sg
+import metaFilter
+
+def initialize():
+    pbq = metaFilter.pBoxQuery()
+    window = sg.Window('Pirate Box - IPFS Search / Viewer', pbq.pBoxSearchApp(), location=(500, 300), finalize=True)
+    state = pbq.resetAll(window)
+    return [pbq, window, state]
+
+def main():
+    pbq, window, state = initialize()
+    idx = None
+    while True:
+        if state == 0:
+            idx = 0
+            field = ''
+            input = None
+
+        event, values = window.read()  # Wait for user input
+
+        # Ignore metadata listbox selections unless in state 0
+        if event == '-META-' and state != 0 and idx is not None:
+            window['-META-'].update(set_to_index=idx, scroll_to_index=idx)
+
+        if event in (None, 'Exit'):             # Exit this application
+            break
+
+        elif event.startswith('Cancel'):        # Ignore this field and return to state 0
+            pbq.resetWidgets(window, [state])   # Clean up any droppings left behind
+            state = pbq.resetToState0(window)   # Not sure why a number is appended to event
+            continue
+
+        elif event.startswith('Ok'):            # Accept the user input and add to list
+            if input is not None:               # Should never be None with Ok event
+                pbq.addSQL2SearchCriteriaList(window, state, field, input)
+                state = pbq.resetToState0(window)
+            continue
+
+        elif event == '-META-' and state == 0:     # Starting state - select a metadata field
+            idx = window['-META-'].GetIndexes()[0] # Get index of selected listbox item
+            field = values['-META-'][0]            # Only 1 selection possible
+            window[f'-ST{state}-'].update(visible=False)  # Hide state 0 instructions
+            state = pbq.Metafields[field]                 # Update state for appropriate field type
+
+            # Load the selection data into the appropriate elements
+            # For now they are all listboxes, and are based on the metadata field chosen
+            if field == "grupe": window['-LBOX1-'].update(pbq.Grupes)
+            if field == "ext": window['-LBOX1-'].update(pbq.Ext)
+            if field == "extractor_key": window['-LBOX1-'].update(pbq.ExKey)
+            if field == "format_note": window['-LBOX1-'].update(pbq.Format)
+            window[f'-MSG{state}-'].update(f'Use the controls above to set a value for {field} and click Ok or: '),
+            window[f'-ST{state}-'].update(visible=True)   # Unhide widget to get input
+
+        elif values['-MENU-']:
+            if event.find('-THM') >= 0:
+                theme = event.split("::")[0]
+                # popup theme selection preview
+                sg.theme_previewer(columns=4, scroll_area_size=(400, 300), scrollable=True, search_string=theme)
+
+            elif event in ('Texas', 'New York'):
+                pass # Load SQL corresponding database file to use
+                if event == 'Texas': svr = 0
+                else: svr = 1
+                pbq.openDatabase(window, event, svr)
+
+        elif event == '-SEARCH-' and len(pbq.Where) > 0:           # Run the query to get results
+            pbq.runQuery(window)
+
+        elif event == '-RESULTS-':                                 # User clicked on a result row
+            fields = values[event][0].strip().split()
+            if fields[0].isdecimal():
+                key, date, type, dur = (fields[0], fields[1], fields[2], fields[3])
+                hash = pbq.getHash(key)
+                for f in range(5, len(fields)):
+                    fields[4] += ' ' + fields[f]                   # Combine remainder into title
+                title = fields[4]
+                yr, mo, dy = (date[0:4], date[4:6], date[6:])
+                minutes, s = divmod(int(dur), 60)
+                h, m = divmod(minutes, 60)
+                duration = "%02d:%02d:%02d" % (h, m, s)
+                sg.popup(f"Item: {key}",
+                         f"Title: {title}",
+                         f"Upload Date: {mo}/{dy}/{yr}",
+                         f"Media Type: {type}",
+                         f"Duration: {duration}",
+                         f"IPFS Address: {hash}")
+
+        # Process events for metadata fields
+        elif state == 1: input = pbq.handleState1(window, event, values)
+        elif state == 2: input = pbq.handleState2(window, event, values)
+        elif state == 3: input = pbq.handleState3(window, event, values)
+        elif state == 4: input = pbq.handleState4(window, event, values)
+        elif state == 5: input = pbq.handleState5(window, event, values)
+        elif state == 6: input = pbq.handleState6(window, event, values)
+        elif state == 7: input = pbq.handleState7(window, event, values)
+        elif state == 8: input = pbq.handleState8(window, event, values)
+
+        # Reset to start a new search with current database
+        if event == '-CLEAR-':
+            state = pbq.resetToState0(window)
+            pbq.resetWidgets(window, range(1, 9))
+            pbq.Where = []
+            window['-TODO-'].update(values=[])
+            window['-RESULTS-'].update(values=[])
+    window.close()
+
+###############################################################################
+# main is only called if this file is a script not an object class definition.#
+# If this code is useful as a class it will be easy to make it one.           #
+###############################################################################
+if __name__ == "__main__":
+    main()
+
+exit(0)
