@@ -1,6 +1,6 @@
 ## UPDATE (Feb 26th, 2021):
 I have completed the preliminary search GUI app which is found in the pboxSearch folder. Rudimentary, proof of concept without IPFS integration.
-I have also updated the ytdl-VideoGrabber files with most recent tweaks & changes which are relatively minor functionally.
+I have also updated the ytdl-VideoGrabber files with most recent tweaks & changes which are relatively minor functionally. Runs without any modifications on a RPi4 - 4GB RAM. Only thing I had to do was install PySimpleGUI pkg with pip3.
 
 # ytdl-videoGrabber.py
 ## NOTE (May 18th, 2020): 
